@@ -2,12 +2,14 @@ import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AppService } from './app.service';
 import { WatchDto } from './watch.dto';
 import { FlightService } from './flight/flight.service';
+import { SubscriptionService } from './subscription/subscription.service';
 
 @Controller()
 export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly flightService: FlightService,
+    private readonly subscriptionService: SubscriptionService,
   ) {}
 
   @Get()
@@ -35,11 +37,10 @@ export class AppController {
     };
   }
 
-  private subscriptions = [];
-
   @Post('subscribe')
-  subscribe(@Body() subscription: any) {
-    this.subscriptions.push(subscription);
-    return { message: 'Subscribed!' };
+  subscribe(@Body() body: any) {
+    const { subscription } = body;
+    this.subscriptionService.addSubscription(subscription);
+    return { message: '✅ Subscribed to push notifications' };
   }
 }

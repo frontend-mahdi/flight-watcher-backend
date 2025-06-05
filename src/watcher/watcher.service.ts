@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { FlightService } from '../flight/flight.service';
 import * as webpush from 'web-push';
+import { SubscriptionService } from 'src/subscription/subscription.service';
 
 // Set VAPID keys here (move to .env later)
 webpush.setVapidDetails(
@@ -14,7 +15,10 @@ webpush.setVapidDetails(
 export class WatcherService {
   private readonly logger = new Logger(WatcherService.name);
 
-  constructor(private flightService: FlightService) {}
+  constructor(
+    private flightService: FlightService,
+    private subscriptionService: SubscriptionService,
+  ) {}
 
   @Cron(CronExpression.EVERY_30_SECONDS)
   async handleFlightCheck() {
@@ -35,25 +39,25 @@ export class WatcherService {
         );
 
         // ✨ Simulate push subscription for testing
-        const subscription = {
-          endpoint: 'https://fcm.googleapis.com/fcm/send/...',
-          keys: {
-            p256dh: '...',
-            auth: '...',
-          },
-        };
 
-        const payload = JSON.stringify({
-          title: '🎉 Flight Available!',
-          body: `${cheapest.airline} - ${cheapest.cheapestPrice} IRR on ${cheapest.departureDate}`,
-        });
-
-        await webpush.sendNotification(subscription, payload);
+        const allSubscriptions = this.subscriptionService.getAll();
+        for (const sub of allSubscriptions) {
+          await webpush.sendNotification(
+            sub,
+            JSON.stringify({
+              title: '✈️ Flight Available!',
+              body: `Airline ${cheapest.airline}, Price: ${cheapest.cheapestPrice}`,
+            }),
+          );
+        }
       } else {
         this.logger.log('❌ No flights found.');
       }
     } catch (error) {
-      this.logger.error('💥 Error checking flight or sending notification', error);
+      this.logger.error(
+        '💥 Error checking flight or sending notification',
+        error,
+      );
     }
   }
 }
