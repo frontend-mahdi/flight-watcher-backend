@@ -2,7 +2,7 @@ name: Deploy to My Server
 
 on:
   push:
-    branches: [ main ] # or your deployment branch
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -18,13 +18,18 @@ jobs:
     - name: Save Docker image to archive
       run: docker save nestjs-app | gzip > nestjs-app.tar.gz
 
-    - name: Copy Docker image to server
+    - name: Write .env to a file
+      run: echo "${{ secrets.ENV_FILE }}" > .env
+
+    - name: Copy Docker image and .env to server
       uses: appleboy/scp-action@v0.1.4
       with:
         host: 193.5.44.15
         username: root
         password: ${{ secrets.SERVER_PASSWORD }}
-        source: "nestjs-app.tar.gz"
+        source: |
+          nestjs-app.tar.gz
+          .env
         target: "~/"
 
     - name: Run container on server
@@ -37,4 +42,7 @@ jobs:
           docker load < nestjs-app.tar.gz
           docker stop nestjs-app || true
           docker rm nestjs-app || true
-          docker run -d --name nestjs-app -p 80:3000 nestjs-app
+          docker run -d --name nestjs-app \
+            --env-file /root/.env \
+            -p 80:3000 \
+            nestjs-app
