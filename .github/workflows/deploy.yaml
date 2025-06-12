@@ -14,6 +14,10 @@ jobs:
 
     - name: Build Docker image
       run: docker build -t nestjs-app .
+      working-directory: ./ 
+
+    - name: List Docker images
+      run: docker images
 
     - name: Save Docker image to archive
       run: docker save nestjs-app | gzip > nestjs-app.tar.gz
