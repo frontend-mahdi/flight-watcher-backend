@@ -1,0 +1,40 @@
+name: Deploy to My Server
+
+on:
+  push:
+    branches: [ main ] # or your deployment branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build Docker image
+      run: docker build -t nestjs-app .
+
+    - name: Save Docker image to archive
+      run: docker save nestjs-app | gzip > nestjs-app.tar.gz
+
+    - name: Copy Docker image to server
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: 193.5.44.15
+        username: root
+        password: ${{ secrets.SERVER_PASSWORD }}
+        source: "nestjs-app.tar.gz"
+        target: "~/"
+
+    - name: Run container on server
+      uses: appleboy/ssh-action@v0.1.6
+      with:
+        host: 193.5.44.15
+        username: root
+        password: ${{ secrets.SERVER_PASSWORD }}
+        script: |
+          docker load < nestjs-app.tar.gz
+          docker stop nestjs-app || true
+          docker rm nestjs-app || true
+          docker run -d --name nestjs-app -p 80:3000 nestjs-app
